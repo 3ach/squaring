@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Squaring Test GCode Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white min-h-screen">
+    <div class="p-4">
+        <h1 class="text-2xl font-bold text-gray-900 mb-4">Squaring Test GCode Generator</h1>
+        <p class="text-sm text-gray-600 mb-4">Generate gcode to mark four corners of a rectangle. Measure both diagonals - they should be equal if your machine is square. Under 1mm difference is very good.</p>
+
+        <div class="mb-4">
+            <!-- Machine and Driver Selection -->
+            <div class="inline-block p-1.5 align-top">
+                <label class="block mb-2 text-sm font-medium text-gray-900">
+                    Machine:
+                    <select id="machine" class="block py-2.5 px-0 w-full text-sm text-gray-500 bg-transparent border-0 border-b-2 border-gray-200 appearance-none focus:outline-none focus:ring-0 focus:border-gray-200 peer">
+                        <option value="lowrider">Lowrider</option>
+                        <option value="mpcnc">MPCNC</option>
+                    </select>
+                </label>
+                <label class="block mb-2 text-sm font-medium text-gray-900">
+                    Driver:
+                    <select id="driver" class="block py-2.5 px-0 w-full text-sm text-gray-500 bg-transparent border-0 border-b-2 border-gray-200 appearance-none focus:outline-none focus:ring-0 focus:border-gray-200 peer">
+                        <option value="grbl">GRBL/Jackpot</option>
+                        <option value="marlin">Marlin</option>
+                    </select>
+                </label>
+            </div>
+
+            <!-- X/Y Size -->
+            <div class="inline-block p-1.5 align-top">
+                <label class="block mb-2 text-sm font-medium text-gray-900">
+                    X Size (mm):
+                    <input type="number" id="xSize" value="1100" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5">
+                </label>
+                <label class="block mb-2 text-sm font-medium text-gray-900">
+                    Y Size (mm):
+                    <input type="number" id="ySize" value="2300" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5">
+                </label>
+            </div>
+
+            <!-- X/Y Offset -->
+            <div class="inline-block p-1.5 align-top">
+                <label class="block mb-2 text-sm font-medium text-gray-900">
+                    X Offset (mm):
+                    <input type="number" id="xOffset" value="50" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5">
+                </label>
+                <label class="block mb-2 text-sm font-medium text-gray-900">
+                    Y Offset (mm):
+                    <input type="number" id="yOffset" value="50" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5">
+                </label>
+            </div>
+
+            <!-- Z Heights -->
+            <div class="inline-block p-1.5 align-top">
+                <label class="block mb-2 text-sm font-medium text-gray-900">
+                    Safe Z (mm):
+                    <input type="number" id="safeZ" value="50" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5">
+                </label>
+                <label class="block mb-2 text-sm font-medium text-gray-900">
+                    Touch Z (mm):
+                    <input type="number" id="touchZ" value="25" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5">
+                </label>
+            </div>
+
+            <!-- Dwell Time -->
+            <div class="inline-block p-1.5 align-top">
+                <label class="block mb-2 text-sm font-medium text-gray-900">
+                    Dwell Time (s):
+                    <input type="number" id="touchDwell" value="1" step="0.1" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5">
+                </label>
+            </div>
+
+            <!-- Feed Rates -->
+            <div class="inline-block p-1.5 align-top">
+                <label class="block mb-2 text-sm font-medium text-gray-900">
+                    Travel Feed (mm/min):
+                    <input type="number" id="travelFeed" value="3000" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5">
+                </label>
+                <label class="block mb-2 text-sm font-medium text-gray-900">
+                    Plunge Feed (mm/min):
+                    <input type="number" id="plungeFeed" value="300" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5">
+                </label>
+            </div>
+        </div>
+
+        <!-- Download Button -->
+        <div class="mb-8">
+            <button onclick="downloadGcode()" class="bg-pink-500 hover:bg-pink-600 text-white font-medium rounded-lg text-sm px-5 py-2.5">
+                Download .gcode
+            </button>
+        </div>
+
+        <!-- Measurement Analysis Section -->
+        <hr class="my-6 border-gray-300">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Measurement Analysis</h2>
+        <p class="text-sm text-gray-600 mb-4">Enter your measured values below to get tuning recommendations. The diagram shows the rectangle from above, with the front of the machine at the bottom.</p>
+
+        <div class="flex flex-wrap gap-6 mb-6">
+            <!-- SVG Diagram -->
+            <div class="flex-shrink-0">
+                <svg id="measurementDiagram" width="320" height="320" class="border border-gray-300 rounded-lg bg-gray-50">
+                    <!-- Rectangle -->
+                    <rect x="60" y="60" width="200" height="200" fill="none" stroke="#374151" stroke-width="2"/>
+
+                    <!-- Corner labels -->
+                    <text x="50" y="270" class="text-xs" fill="#6b7280">1</text>
+                    <text x="265" y="270" class="text-xs" fill="#6b7280">2</text>
+                    <text x="265" y="55" class="text-xs" fill="#6b7280">3</text>
+                    <text x="50" y="55" class="text-xs" fill="#6b7280">4</text>
+
+                    <!-- Side labels -->
+                    <text x="160" y="285" text-anchor="middle" class="text-sm font-medium" fill="#374151">X Min</text>
+                    <text x="160" y="50" text-anchor="middle" class="text-sm font-medium" fill="#374151">X Max</text>
+                    <text x="25" y="165" text-anchor="middle" transform="rotate(-90, 25, 165)" class="text-sm font-medium" fill="#374151">Y Min</text>
+                    <text x="295" y="165" text-anchor="middle" transform="rotate(90, 295, 165)" class="text-sm font-medium" fill="#374151">Y Max</text>
+
+                    <!-- Diagonals -->
+                    <line x1="60" y1="260" x2="260" y2="60" stroke="#ec4899" stroke-width="1.5" stroke-dasharray="5,5"/>
+                    <line x1="260" y1="260" x2="60" y2="60" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="5,5"/>
+
+                    <!-- Diagonal labels -->
+                    <text x="180" y="130" class="text-sm font-medium" fill="#ec4899">D1</text>
+                    <text x="120" y="130" class="text-sm font-medium" fill="#8b5cf6">D2</text>
+
+                    <!-- Front indicator -->
+                    <text x="160" y="310" text-anchor="middle" class="text-xs" fill="#9ca3af">↓ FRONT (Home Side) ↓</text>
+                </svg>
+            </div>
+
+            <!-- Measurement Inputs -->
+            <div class="flex-grow">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-700 mb-2">Side Measurements (mm)</h3>
+                        <label class="block mb-2 text-sm font-medium text-gray-900">
+                            X Min (1→2):
+                            <input type="number" id="measXMin" step="0.01" class="measure-input bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5">
+                        </label>
+                        <label class="block mb-2 text-sm font-medium text-gray-900">
+                            X Max (4→3):
+                            <input type="number" id="measXMax" step="0.01" class="measure-input bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5">
+                        </label>
+                        <label class="block mb-2 text-sm font-medium text-gray-900">
+                            Y Min (1→4):
+                            <input type="number" id="measYMin" step="0.01" class="measure-input bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5">
+                        </label>
+                        <label class="block mb-2 text-sm font-medium text-gray-900">
+                            Y Max (2→3):
+                            <input type="number" id="measYMax" step="0.01" class="measure-input bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5">
+                        </label>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-700 mb-2">Diagonal Measurements (mm)</h3>
+                        <label class="block mb-2 text-sm font-medium text-gray-900">
+                            D1 <span class="text-pink-500">(1→3, pink)</span>:
+                            <input type="number" id="measD1" step="0.01" class="measure-input bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5">
+                        </label>
+                        <label class="block mb-2 text-sm font-medium text-gray-900">
+                            D2 <span class="text-purple-500">(2→4, purple)</span>:
+                            <input type="number" id="measD2" step="0.01" class="measure-input bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5">
+                        </label>
+
+                        <h3 class="text-sm font-semibold text-gray-700 mb-2 mt-4">Current Steps/mm</h3>
+                        <label class="block mb-2 text-sm font-medium text-gray-900">
+                            X Steps/mm:
+                            <input type="number" id="stepsX" value="200" step="0.01" class="measure-input bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5">
+                        </label>
+                        <label class="block mb-2 text-sm font-medium text-gray-900">
+                            Y Steps/mm:
+                            <input type="number" id="stepsY" value="200" step="0.01" class="measure-input bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5">
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis Results -->
+        <div id="analysisResults" class="bg-gray-50 border border-gray-300 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-gray-900 mb-3">Analysis Results</h3>
+            <div id="analysisContent" class="text-sm text-gray-700">
+                <p class="text-gray-500 italic">Enter your measurements above to see analysis and recommendations.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Default values for URL parameter handling
+        const defaults = {
+            machine: 'lowrider',
+            driver: 'grbl',
+            xSize: 1100,
+            ySize: 2300,
+            xOffset: 50,
+            yOffset: 50,
+            safeZ: 50,
+            touchZ: 25,
+            touchDwell: 1,
+            travelFeed: 3000,
+            plungeFeed: 300
+        };
+
+        // Load parameters from URL on page load
+        function loadFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+
+            for (const [key, defaultVal] of Object.entries(defaults)) {
+                if (params.has(key)) {
+                    const el = document.getElementById(key);
+                    if (el) {
+                        el.value = params.get(key);
+                    }
+                }
+            }
+        }
+
+        // Update URL with non-default parameters
+        function updateUrl() {
+            const params = new URLSearchParams();
+
+            for (const [key, defaultVal] of Object.entries(defaults)) {
+                const el = document.getElementById(key);
+                if (el) {
+                    const currentVal = el.type === 'number' ? parseFloat(el.value) : el.value;
+                    if (currentVal !== defaultVal && currentVal.toString() !== defaultVal.toString()) {
+                        params.set(key, el.value);
+                    }
+                }
+            }
+
+            const newUrl = params.toString()
+                ? `${window.location.pathname}?${params.toString()}`
+                : window.location.pathname;
+
+            window.history.replaceState({}, '', newUrl);
+        }
+
+        // Starting GCode templates
+        const startingGcode = {
+            mpcnc: {
+                marlin: `G92 X0 Y0 Z0 ; Set Current position to 0, all axes
+G00 Z5.0000 F500 ; Raise Z 5mm at 8.3mm/s to clear clamps
+G28 Z ; Home Z touchplate
+G92 Z0.5 ; Account for probe thickness
+G00 Z5.000 F500 ; Raise Z probe off of surface
+M00 ; Pause for LCD button press`,
+                grbl: `G21 G90 G94 G92 X0 Y0
+M0 (MSG Attach probe)
+G38.2 Z-110 F200 P0.5 (probe down set thickness)
+G1 Z10 F900
+M0 (MSG Remove probe)
+M62 P1 (If used start spindle pin27)`
+            },
+            lowrider: {
+                marlin: `G92 X0 Y0 ; Set Current position to 0 on X and Y axes
+M0 Attach probe ; Pause to connect touchplate
+G38.2 Z0 ; Probe down to touchplate
+G92 Z0.5 ; Set new Z position to thickness of touchplate
+G1 Z2 F900 ; Lift off touchplate
+M0 Remove probe ; Pause and wait for touchplate removal
+M106 ; Turn on an IOT relay to start router or vacuum`,
+                grbl: `G21 G90 G94 G92 X0 Y0
+M0 (MSG Attach probe)
+G38.2 Z-110 F200 P0.5 (probe down set thickness)
+G1 Z10 F900
+M0 (MSG Remove probe)
+M62 P1 (If used start spindle pin27)`
+            }
+        };
+
+        // Ending GCode templates
+        const endingGcode = {
+            mpcnc: {
+                marlin: `G0 Z5 ; Lift Z axis 5mm
+M00 ; Pause so the Z axis does not fall`,
+                grbl: `M63 P1 (stop spindle pin27)
+G91 G0 Z10 G90 M30`
+            },
+            lowrider: {
+                marlin: `M107 ; Turn off IOT Relay
+G28 Z ; Lift Z axis
+M0 Diggidy Done! ; Pause to keep steppers energized`,
+                grbl: `M63 P1 (stop spindle pin27)
+$HZ
+M30`
+            }
+        };
+
+        function generateGcode() {
+            const machine = document.getElementById('machine').value;
+            const driver = document.getElementById('driver').value;
+            const xSize = parseFloat(document.getElementById('xSize').value);
+            const ySize = parseFloat(document.getElementById('ySize').value);
+            const xOffset = parseFloat(document.getElementById('xOffset').value);
+            const yOffset = parseFloat(document.getElementById('yOffset').value);
+            const safeZ = parseFloat(document.getElementById('safeZ').value);
+            const touchZ = parseFloat(document.getElementById('touchZ').value);
+            const touchDwell = parseFloat(document.getElementById('touchDwell').value);
+            const travelFeed = parseFloat(document.getElementById('travelFeed').value);
+            const plungeFeed = parseFloat(document.getElementById('plungeFeed').value);
+
+            // Calculate corner positions
+            const corner1X = xOffset;
+            const corner1Y = yOffset;
+            const corner2X = xOffset + xSize;
+            const corner2Y = yOffset;
+            const corner3X = xOffset + xSize;
+            const corner3Y = yOffset + ySize;
+            const corner4X = xOffset;
+            const corner4Y = yOffset + ySize;
+
+            const machineName = machine === 'mpcnc' ? 'MPCNC' : 'Lowrider';
+            const driverName = driver === 'marlin' ? 'Marlin' : 'GRBL/Jackpot';
+
+            let gcode = `; ${machineName} Squaring Test Program (${driverName})
+; This program marks four corners of a rectangle to test machine squareness
+; After running, measure both diagonals - they should be equal if square
+; Under 1mm difference is very good
+;
+; Rectangle: ${xSize}mm x ${ySize}mm
+; Offset: (${xOffset}, ${yOffset})
+; Expected diagonal: ${Math.sqrt(xSize * xSize + ySize * ySize).toFixed(2)}mm
+
+; ========================================
+; STARTING GCODE
+; ========================================
+${startingGcode[machine][driver]}
+
+; ========================================
+; PROGRAM START
+; ========================================
+
+G21                     ; Set units to millimeters
+G90                     ; Absolute positioning
+G94                     ; Feed rate per minute
+
+; Move to safe Z height
+G0 Z${safeZ} F${travelFeed}
+
+; ========================================
+; CORNER 1: (${corner1X}, ${corner1Y})
+; ========================================
+G0 X${corner1X} Y${corner1Y} F${travelFeed}  ; Move to corner 1
+G1 Z${touchZ} F${plungeFeed}                 ; Lower to touch
+G4 P${touchDwell}                            ; Dwell
+G0 Z${safeZ}                                 ; Raise to safe height
+
+; ========================================
+; CORNER 2: (${corner2X}, ${corner2Y})
+; ========================================
+G0 X${corner2X} Y${corner2Y} F${travelFeed}  ; Move to corner 2
+G1 Z${touchZ} F${plungeFeed}                 ; Lower to touch
+G4 P${touchDwell}                            ; Dwell
+G0 Z${safeZ}                                 ; Raise to safe height
+
+; ========================================
+; CORNER 3: (${corner3X}, ${corner3Y})
+; ========================================
+G0 X${corner3X} Y${corner3Y} F${travelFeed}  ; Move to corner 3
+G1 Z${touchZ} F${plungeFeed}                 ; Lower to touch
+G4 P${touchDwell}                            ; Dwell
+G0 Z${safeZ}                                 ; Raise to safe height
+
+; ========================================
+; CORNER 4: (${corner4X}, ${corner4Y})
+; ========================================
+G0 X${corner4X} Y${corner4Y} F${travelFeed}  ; Move to corner 4
+G1 Z${touchZ} F${plungeFeed}                 ; Lower to touch
+G4 P${touchDwell}                            ; Dwell
+G0 Z${safeZ}                                 ; Raise to safe height
+
+; ========================================
+; RETURN TO START
+; ========================================
+G0 X${corner1X} Y${corner1Y} F${travelFeed}  ; Return to origin corner
+G0 Z${safeZ}                                 ; Ensure safe Z height
+
+; ========================================
+; ENDING GCODE
+; ========================================
+${endingGcode[machine][driver]}
+`;
+
+            // Store gcode for download
+            window.generatedGcode = gcode;
+        }
+
+        function downloadGcode() {
+            const gcode = window.generatedGcode;
+            if (!gcode) {
+                alert('Please generate GCode first');
+                return;
+            }
+
+            const machine = document.getElementById('machine').value;
+            const blob = new Blob([gcode], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${machine}_squaring_test.gcode`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function analyzeMeasurements() {
+            const xSize = parseFloat(document.getElementById('xSize').value);
+            const ySize = parseFloat(document.getElementById('ySize').value);
+
+            const measXMin = parseFloat(document.getElementById('measXMin').value);
+            const measXMax = parseFloat(document.getElementById('measXMax').value);
+            const measYMin = parseFloat(document.getElementById('measYMin').value);
+            const measYMax = parseFloat(document.getElementById('measYMax').value);
+            const measD1 = parseFloat(document.getElementById('measD1').value);
+            const measD2 = parseFloat(document.getElementById('measD2').value);
+
+            const stepsX = parseFloat(document.getElementById('stepsX').value);
+            const stepsY = parseFloat(document.getElementById('stepsY').value);
+
+            const content = document.getElementById('analysisContent');
+
+            // Check if we have enough data
+            if (isNaN(measXMin) && isNaN(measXMax) && isNaN(measYMin) && isNaN(measYMax) && isNaN(measD1) && isNaN(measD2)) {
+                content.innerHTML = '<p class="text-gray-500 italic">Enter your measurements above to see analysis and recommendations.</p>';
+                return;
+            }
+
+            let html = '';
+            let warnings = [];
+            let recommendations = [];
+            let geometryErrors = [];
+
+            const expectedDiagonal = Math.sqrt(xSize * xSize + ySize * ySize);
+            const tolerance = 0.5; // mm tolerance for "good" measurements
+
+            // Triangle inequality validation
+            // A valid triangle with sides a, b, c requires: a + b > c, a + c > b, b + c > a
+            function checkTriangle(a, b, c, aName, bName, cName) {
+                if (isNaN(a) || isNaN(b) || isNaN(c)) return null;
+
+                const errors = [];
+                if (a + b <= c) {
+                    const deficit = c - (a + b);
+                    errors.push(`${aName} + ${bName} (${(a + b).toFixed(2)}mm) must be greater than ${cName} (${c.toFixed(2)}mm) - short by ${deficit.toFixed(2)}mm`);
+                }
+                if (a + c <= b) {
+                    const deficit = b - (a + c);
+                    errors.push(`${aName} + ${cName} (${(a + c).toFixed(2)}mm) must be greater than ${bName} (${b.toFixed(2)}mm) - short by ${deficit.toFixed(2)}mm`);
+                }
+                if (b + c <= a) {
+                    const deficit = a - (b + c);
+                    errors.push(`${bName} + ${cName} (${(b + c).toFixed(2)}mm) must be greater than ${aName} (${a.toFixed(2)}mm) - short by ${deficit.toFixed(2)}mm`);
+                }
+                return errors.length > 0 ? errors : null;
+            }
+
+            // Check the four triangles formed by the diagonals
+            // Triangle 1-2-3: X Min, Y Max, D1
+            const tri123 = checkTriangle(measXMin, measYMax, measD1, 'X Min', 'Y Max', 'D1');
+            if (tri123) {
+                geometryErrors.push({ triangle: 'Triangle 1-2-3 (X Min, Y Max, D1)', errors: tri123 });
+            }
+
+            // Triangle 1-3-4: Y Min, X Max, D1
+            const tri134 = checkTriangle(measYMin, measXMax, measD1, 'Y Min', 'X Max', 'D1');
+            if (tri134) {
+                geometryErrors.push({ triangle: 'Triangle 1-3-4 (Y Min, X Max, D1)', errors: tri134 });
+            }
+
+            // Triangle 1-2-4: X Min, Y Min, D2
+            const tri124 = checkTriangle(measXMin, measYMin, measD2, 'X Min', 'Y Min', 'D2');
+            if (tri124) {
+                geometryErrors.push({ triangle: 'Triangle 1-2-4 (X Min, Y Min, D2)', errors: tri124 });
+            }
+
+            // Triangle 2-3-4: Y Max, X Max, D2
+            const tri234 = checkTriangle(measYMax, measXMax, measD2, 'Y Max', 'X Max', 'D2');
+            if (tri234) {
+                geometryErrors.push({ triangle: 'Triangle 2-3-4 (Y Max, X Max, D2)', errors: tri234 });
+            }
+
+            // Check X measurements match each other
+            if (!isNaN(measXMin) && !isNaN(measXMax)) {
+                const xDiff = Math.abs(measXMin - measXMax);
+                if (xDiff > tolerance) {
+                    warnings.push(`<span class="text-red-600 font-medium">Warning:</span> X measurements differ by ${xDiff.toFixed(2)}mm (X Min: ${measXMin}mm, X Max: ${measXMax}mm). This suggests a measurement error or mechanical problem - the X distances should always be equal.`);
+                } else {
+                    html += `<p class="text-green-600">✓ X measurements match (difference: ${xDiff.toFixed(2)}mm)</p>`;
+                }
+            }
+
+            // Check Y measurements
+            let yBeltWarning = false;
+            if (!isNaN(measYMin) && !isNaN(measYMax)) {
+                const yDiff = Math.abs(measYMin - measYMax);
+                if (yDiff > tolerance) {
+                    yBeltWarning = true;
+                    warnings.push(`<span class="text-yellow-600 font-medium">Belt calibration needed:</span> Y measurements differ by ${yDiff.toFixed(2)}mm (Y Min: ${measYMin}mm, Y Max: ${measYMax}mm). This indicates the belts on the two Y motors have different effective tensions or tooth engagement. Check belt tension and ensure both Y belts are equally tight.`);
+                } else {
+                    html += `<p class="text-green-600">✓ Y measurements match (difference: ${yDiff.toFixed(2)}mm)</p>`;
+                }
+            }
+
+            // Check X scaling (use average of X Min and X Max)
+            const avgX = (!isNaN(measXMin) && !isNaN(measXMax)) ? (measXMin + measXMax) / 2 :
+                         (!isNaN(measXMin) ? measXMin : measXMax);
+            if (!isNaN(avgX) && !isNaN(stepsX)) {
+                const xError = avgX - xSize;
+                if (Math.abs(xError) > tolerance) {
+                    const newStepsX = stepsX * (xSize / avgX);
+                    recommendations.push(`<span class="font-medium">X Steps/mm:</span> Change from <code class="bg-gray-200 px-1 rounded">${stepsX}</code> to <code class="bg-green-200 px-1 rounded">${newStepsX.toFixed(3)}</code> (measured ${avgX.toFixed(2)}mm, expected ${xSize}mm, error: ${xError > 0 ? '+' : ''}${xError.toFixed(2)}mm)`);
+                } else {
+                    html += `<p class="text-green-600">✓ X dimension is accurate (error: ${xError > 0 ? '+' : ''}${xError.toFixed(2)}mm)</p>`;
+                }
+            }
+
+            // Check Y scaling (use average of Y Min and Y Max)
+            const avgY = (!isNaN(measYMin) && !isNaN(measYMax)) ? (measYMin + measYMax) / 2 :
+                         (!isNaN(measYMin) ? measYMin : measYMax);
+            if (!isNaN(avgY) && !isNaN(stepsY)) {
+                const yError = avgY - ySize;
+                if (Math.abs(yError) > tolerance) {
+                    const newStepsY = stepsY * (ySize / avgY);
+                    let yRec = `<span class="font-medium">Y Steps/mm:</span> Change from <code class="bg-gray-200 px-1 rounded">${stepsY}</code> to <code class="bg-green-200 px-1 rounded">${newStepsY.toFixed(3)}</code> (measured avg ${avgY.toFixed(2)}mm, expected ${ySize}mm, error: ${yError > 0 ? '+' : ''}${yError.toFixed(2)}mm)`;
+                    if (yBeltWarning) {
+                        yRec += `<br><span class="text-yellow-600 text-sm">Note: Y Min and Y Max differ - fix belt calibration first, then re-measure before adjusting steps/mm.</span>`;
+                    }
+                    recommendations.push(yRec);
+                } else {
+                    html += `<p class="text-green-600">✓ Y dimension is accurate (error: ${yError > 0 ? '+' : ''}${yError.toFixed(2)}mm)</p>`;
+                }
+            }
+
+            // Check diagonals for skew
+            if (!isNaN(measD1) && !isNaN(measD2)) {
+                const diagDiff = measD1 - measD2;
+                const absDiagDiff = Math.abs(diagDiff);
+
+                html += `<p class="mt-2"><span class="font-medium">Diagonal difference:</span> ${absDiagDiff.toFixed(2)}mm`;
+                if (absDiagDiff < 1) {
+                    html += ` <span class="text-green-600">(Excellent - under 1mm!)</span>`;
+                } else if (absDiagDiff < 2) {
+                    html += ` <span class="text-yellow-600">(Good - minor adjustment recommended)</span>`;
+                } else {
+                    html += ` <span class="text-red-600">(Needs adjustment)</span>`;
+                }
+                html += `</p>`;
+
+                // Skew analysis - calculate the offset amount
+                // If the left side is forward by 's', then:
+                //   D1² = X² + (Y-s)²  and  D2² = X² + (Y+s)²
+                //   D2² - D1² = 4Ys  =>  s = (D2² - D1²) / (4Y)
+                // Positive s = left forward, negative s = right forward
+                if (absDiagDiff > tolerance) {
+                    const skewOffset = (measD2 * measD2 - measD1 * measD1) / (4 * ySize);
+                    const absSkewOffset = Math.abs(skewOffset);
+
+                    if (skewOffset > 0) {
+                        // Left side is forward, increase Y Min pulloff
+                        recommendations.push(`<span class="font-medium">Skew correction:</span> D2 (${measD2.toFixed(2)}mm) > D1 (${measD1.toFixed(2)}mm) indicates the <strong>front-left corner</strong> is ${absSkewOffset.toFixed(2)}mm further forward. Increase the home pulloff value for the <strong>Y Min motor</strong> by <code class="bg-green-200 px-1 rounded">${absSkewOffset.toFixed(2)}mm</code> to square the machine.`);
+                    } else {
+                        // Right side is forward, increase Y Max pulloff
+                        recommendations.push(`<span class="font-medium">Skew correction:</span> D1 (${measD1.toFixed(2)}mm) > D2 (${measD2.toFixed(2)}mm) indicates the <strong>front-right corner</strong> is ${absSkewOffset.toFixed(2)}mm further forward. Increase the home pulloff value for the <strong>Y Max motor</strong> by <code class="bg-green-200 px-1 rounded">${absSkewOffset.toFixed(2)}mm</code> to square the machine.`);
+                    }
+                }
+
+                // Check if diagonals match expected
+                const avgDiag = (measD1 + measD2) / 2;
+                const diagError = avgDiag - expectedDiagonal;
+                html += `<p><span class="font-medium">Expected diagonal:</span> ${expectedDiagonal.toFixed(2)}mm, Average measured: ${avgDiag.toFixed(2)}mm (error: ${diagError > 0 ? '+' : ''}${diagError.toFixed(2)}mm)</p>`;
+            }
+
+            // Build final output
+            let finalHtml = '';
+
+            // Show geometry errors first (most critical)
+            if (geometryErrors.length > 0) {
+                finalHtml += '<div class="mb-4 p-3 bg-red-100 border-2 border-red-400 rounded">';
+                finalHtml += '<h4 class="font-semibold text-red-800 mb-2">⚠ Physically Impossible Measurements</h4>';
+                finalHtml += '<p class="text-red-700 text-sm mb-2">The measurements entered cannot form a valid shape. Please double-check your measurements.</p>';
+                geometryErrors.forEach(ge => {
+                    finalHtml += `<div class="mb-2"><span class="font-medium text-red-800">${ge.triangle}:</span><ul class="list-disc list-inside ml-2 text-red-700">`;
+                    ge.errors.forEach(e => {
+                        finalHtml += `<li>${e}</li>`;
+                    });
+                    finalHtml += '</ul></div>';
+                });
+                finalHtml += '</div>';
+            }
+
+            if (warnings.length > 0) {
+                finalHtml += '<div class="mb-4 p-3 bg-red-50 border border-red-200 rounded">';
+                finalHtml += warnings.map(w => `<p class="mb-1">${w}</p>`).join('');
+                finalHtml += '</div>';
+            }
+
+            finalHtml += html;
+
+            if (recommendations.length > 0) {
+                finalHtml += '<div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">';
+                finalHtml += '<h4 class="font-semibold text-blue-800 mb-2">Recommended Changes:</h4>';
+                finalHtml += '<ul class="list-disc list-inside space-y-2">';
+                finalHtml += recommendations.map(r => `<li>${r}</li>`).join('');
+                finalHtml += '</ul>';
+                finalHtml += '</div>';
+            } else if (html && warnings.length === 0) {
+                finalHtml += '<div class="mt-4 p-3 bg-green-50 border border-green-200 rounded">';
+                finalHtml += '<p class="text-green-800 font-medium">Your machine appears to be well calibrated!</p>';
+                finalHtml += '</div>';
+            }
+
+            content.innerHTML = finalHtml || '<p class="text-gray-500 italic">Enter more measurements to see analysis.</p>';
+        }
+
+        // Generate on page load and on any input change
+        window.onload = function() {
+            // Load saved parameters from URL
+            loadFromUrl();
+
+            generateGcode();
+            analyzeMeasurements();
+
+            // Add change listeners to gcode inputs
+            document.querySelectorAll('input:not(.measure-input), select').forEach(el => {
+                el.addEventListener('input', () => {
+                    generateGcode();
+                    updateUrl();
+                });
+                el.addEventListener('change', () => {
+                    generateGcode();
+                    updateUrl();
+                });
+            });
+
+            // Add change listeners to measurement inputs (also trigger gcode regen for xSize/ySize)
+            document.querySelectorAll('.measure-input').forEach(el => {
+                el.addEventListener('input', analyzeMeasurements);
+                el.addEventListener('change', analyzeMeasurements);
+            });
+
+            // xSize and ySize affect both gcode and analysis
+            ['xSize', 'ySize'].forEach(id => {
+                document.getElementById(id).addEventListener('input', analyzeMeasurements);
+                document.getElementById(id).addEventListener('change', analyzeMeasurements);
+            });
+        };
+    </script>
+</body>
+</html>

@@ -93,7 +93,8 @@
             </button>
         </div>
 
-        <!-- Measurement Analysis Section -->
+        <!-- Measurement Analysis Section (Lowrider only) -->
+        <div id="measurementSection">
         <hr class="my-6 border-gray-300">
         <h2 class="text-xl font-bold text-gray-900 mb-4">Measurement Analysis</h2>
         <p class="text-sm text-gray-600 mb-4">Enter your measured values below to get tuning recommendations. The diagram shows the rectangle from above, with the front of the machine at the bottom.</p>
@@ -183,6 +184,7 @@
             <div id="analysisContent" class="text-sm text-gray-700">
                 <p class="text-gray-500 italic">Enter your measurements above to see analysis and recommendations.</p>
             </div>
+        </div>
         </div>
     </div>
 
@@ -616,6 +618,12 @@ ${endingGcode[machine][driver]}
             content.innerHTML = finalHtml || '<p class="text-gray-500 italic">Enter more measurements to see analysis.</p>';
         }
 
+        function updateMeasurementVisibility() {
+            const machine = document.getElementById('machine').value;
+            const section = document.getElementById('measurementSection');
+            section.style.display = machine === 'lowrider' ? 'block' : 'none';
+        }
+
         // Generate on page load and on any input change
         window.onload = function() {
             // Load saved parameters from URL
@@ -623,16 +631,19 @@ ${endingGcode[machine][driver]}
 
             generateGcode();
             analyzeMeasurements();
+            updateMeasurementVisibility();
 
             // Add change listeners to gcode inputs
             document.querySelectorAll('input:not(.measure-input), select').forEach(el => {
                 el.addEventListener('input', () => {
                     generateGcode();
                     updateUrl();
+                    updateMeasurementVisibility();
                 });
                 el.addEventListener('change', () => {
                     generateGcode();
                     updateUrl();
+                    updateMeasurementVisibility();
                 });
             });
 

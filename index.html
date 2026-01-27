@@ -562,11 +562,11 @@ ${endingGcode[machine][driver]}
                     const absSkewOffset = Math.abs(skewOffset);
 
                     if (skewOffset > 0) {
-                        // Left side is forward, increase Left pulloff
-                        recommendations.push(`<span class="font-medium">Skew correction:</span> D2 (${measD2.toFixed(2)}mm) > D1 (${measD1.toFixed(2)}mm) indicates the <strong>front-left corner</strong> is ${absSkewOffset.toFixed(2)}mm further forward. Increase the home pulloff value for the <strong>Left motor</strong> by <code class="bg-green-200 px-1 rounded">${absSkewOffset.toFixed(2)}mm</code> to square the machine.`);
-                    } else {
                         // Right side is forward, increase Right pulloff
-                        recommendations.push(`<span class="font-medium">Skew correction:</span> D1 (${measD1.toFixed(2)}mm) > D2 (${measD2.toFixed(2)}mm) indicates the <strong>front-right corner</strong> is ${absSkewOffset.toFixed(2)}mm further forward. Increase the home pulloff value for the <strong>Right motor</strong> by <code class="bg-green-200 px-1 rounded">${absSkewOffset.toFixed(2)}mm</code> to square the machine.`);
+                        recommendations.push(`<span class="font-medium">Skew correction:</span> D2 (${measD2.toFixed(2)}mm) > D1 (${measD1.toFixed(2)}mm) indicates the <strong>front-right corner</strong> is ${absSkewOffset.toFixed(2)}mm further forward. Increase the home pulloff value for the <strong>Right motor</strong> by <code class="bg-green-200 px-1 rounded">${absSkewOffset.toFixed(2)}mm</code> to square the machine.`);
+                    } else {
+                        // Left side is forward, increase Left pulloff
+                        recommendations.push(`<span class="font-medium">Skew correction:</span> D1 (${measD1.toFixed(2)}mm) > D2 (${measD2.toFixed(2)}mm) indicates the <strong>front-left corner</strong> is ${absSkewOffset.toFixed(2)}mm further forward. Increase the home pulloff value for the <strong>Left motor</strong> by <code class="bg-green-200 px-1 rounded">${absSkewOffset.toFixed(2)}mm</code> to square the machine.`);
                     }
                 }
 
